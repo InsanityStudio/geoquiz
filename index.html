@@ -41,31 +41,30 @@
             height: 100%;
             width: 100%;
             overflow: hidden;
+            background-color: var(--bg-color);
         }
 
         body {
-            background-color: var(--bg-color);
             font-family: Arial, Helvetica, sans-serif;
             user-select: none;
             transition: background-color 0.3s;
         }
 
-        /* BACKGROUND GRID - BLURRED */
+        /* BACKGROUND GRID - EXPANDED TO HIDE BLUR EDGES */
         #flag-grid-bg {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
+            top: -50px;
+            left: -50px;
+            right: -50px;
+            bottom: -50px;
             z-index: 1;
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
             grid-auto-rows: 53px;
             overflow: hidden;
             filter: var(--grid-filter);
-            transform: scale(1.05); 
-            transition: filter 0.3s;
             pointer-events: none;
+            transition: filter 0.3s;
         }
 
         #flag-grid-bg img {
@@ -149,14 +148,14 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 10px;
+            padding: 5px;
             min-height: 0; 
             position: relative;
         }
 
         .flag-area img {
-            max-width: 100%;
-            max-height: 100%;
+            width: 100%;
+            height: 100%;
             object-fit: contain;
             filter: drop-shadow(0 15px 30px rgba(0,0,0,0.6));
             transition: opacity 0.3s;
@@ -362,6 +361,52 @@
     
     <script>
         // ---------------------------------------------------------------------------
+        // Helpers & Setup
+        // ---------------------------------------------------------------------------
+        function normalize(str) {
+            return str.trim().toLowerCase().replace(/[-]/g, ' ').replace(/\s+/g, ' ');
+        }
+
+        const ALL_COUNTRY_STRINGS = [];
+        COUNTRIES.forEach(c => {
+            ALL_COUNTRY_STRINGS.push(normalize(c.name));
+            c.aliases.forEach(a => ALL_COUNTRY_STRINGS.push(normalize(a)));
+        });
+        const UNIQUE_COUNTRY_STRINGS = [...new Set(ALL_COUNTRY_STRINGS)];
+
+        function isPrefixOfAnother(guess) {
+            return UNIQUE_COUNTRY_STRINGS.some(str => str !== guess && str.startsWith(guess));
+        }
+
+        function generateBackground() {
+            const bgContainer = document.getElementById('flag-grid-bg');
+            if (!bgContainer) return;
+            
+            const codes = COUNTRIES.map(c => c.code);
+            const totalFlags = 3000; 
+            let html = '';
+            
+            for (let i = 0; i < totalFlags; i++) {
+                const randomCode = codes[Math.floor(Math.random() * codes.length)];
+                html += `<img src="https://flagcdn.com/w80/${randomCode}.png" alt="" loading="eager">`;
+            }
+            bgContainer.innerHTML = html;
+        }
+
+        function flagUrl(code) {
+            // Use w1280 for high resolution so the flag stays crisp when huge
+            return 'https://flagcdn.com/w1280/' + code + '.png';
+        }
+
+        const preloaded = new Set();
+        function preloadFlag(code) {
+            if (preloaded.has(code)) return;
+            preloaded.add(code);
+            const img = new Image();
+            img.src = flagUrl(code);
+        }
+
+        // ---------------------------------------------------------------------------
         // Game State
         // ---------------------------------------------------------------------------
         let remaining = [];
@@ -379,4 +424,204 @@
         const answerInput = document.getElementById('answer-input');
         const feedbackEl = document.getElementById('feedback');
         const scoreDisplay = document.getElementById('score-display');
-        const progressDisplay =
+        const progressDisplay = document.getElementById('progress-display');
+        
+        const mainMenu = document.getElementById('main-menu');
+        const gameArea = document.getElementById('game-area');
+        const backBtn = document.getElementById('back-btn');
+        const themeToggle = document.getElementById('theme-toggle');
+
+        // ---------------------------------------------------------------------------
+        // Game Flow
+        // ---------------------------------------------------------------------------
+        function shuffle(arr) {
+            const a = arr.slice();
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
+        }
+
+        function preloadUpcoming() {
+            for (let i = 0; i < Math.min(5, remaining.length); i++) {
+                preloadFlag(remaining[remaining.length - 1 - i].code);
+            }
+        }
+
+        function showMenu() {
+            isPlaying = false;
+            mainMenu.classList.remove('hidden');
+            gameArea.classList.add('hidden');
+        }
+
+        function startGame(mode) {
+            isPlaying = true;
+            mainMenu.classList.add('hidden');
+            gameArea.classList.remove('hidden');
+            
+            totalQuestions = mode === 'all' ? COUNTRIES.length : parseInt(mode);
+            remaining = shuffle(COUNTRIES);
+            score = 0;
+            currentIndex = 0;
+            
+            updateTopBar();
+            preloadUpcoming();
+            nextFlag();
+        }
+
+        function nextFlag() {
+            if (currentIndex >= totalQuestions) {
+                isPlaying = false;
+                answered = true;
+                answerInput.disabled = true;
+                flagImg.src = 'https://flagcdn.com/w1280/un.png';
+                flagImg.style.opacity = '0.3';
+                feedbackEl.className = 'feedback correct';
+                feedbackEl.innerHTML = `
+                    <div class="reveal">Finished!</div>
+                    <div>Final Score: ${score} / ${totalQuestions}</div>
+                    <button class="menu-btn back-to-menu-btn" id="finish-menu-btn">Main Menu</button>
+                `;
+                document.getElementById('finish-menu-btn').addEventListener('click', showMenu);
+                return;
+            }
+
+            if (remaining.length === 0) {
+                remaining = shuffle(COUNTRIES);
+            }
+
+            current = remaining.pop();
+            currentIndex++;
+            answered = false;
+            answeredCorrect = false;
+
+            flagImg.src = flagUrl(current.code);
+            flagImg.alt = 'Flag';
+            flagImg.style.opacity = '1';
+
+            answerInput.value = '';
+            answerInput.disabled = false;
+            feedbackEl.className = 'feedback';
+            feedbackEl.innerHTML = '';
+            
+            updateTopBar();
+            answerInput.focus();
+            preloadUpcoming();
+        }
+
+        function updateTopBar() {
+            scoreDisplay.textContent = `Score: ${score}`;
+            progressDisplay.textContent = `${currentIndex}/${totalQuestions}`;
+        }
+
+        function isCorrectGuess(guess) {
+            return (
+                guess === normalize(current.name) ||
+                current.aliases.some(a => normalize(a) === guess)
+            );
+        }
+
+        function submitAnswer() {
+            if (answered) {
+                if (currentIndex < totalQuestions) {
+                    nextFlag();
+                }
+                return;
+            }
+
+            const guess = normalize(answerInput.value);
+            if (!guess) return;
+
+            answered = true;
+            answerInput.disabled = true;
+
+            if (isCorrectGuess(guess)) {
+                answeredCorrect = true;
+                score++;
+                updateTopBar();
+                feedbackEl.className = 'feedback correct';
+                feedbackEl.innerHTML = `<div>✅ ${current.name}</div><div class="hint">Enter / Space for next</div>`;
+            } else {
+                answeredCorrect = false;
+                feedbackEl.className = 'feedback wrong';
+                feedbackEl.innerHTML = `<div>❌ Not quite</div><div class="reveal">${current.name}</div><div class="hint">↓ to override · Enter / Space for next</div>`;
+            }
+        }
+
+        function overrideCorrect() {
+            if (!answered || answeredCorrect || !isPlaying) return;
+            answeredCorrect = true;
+            score++;
+            updateTopBar();
+            feedbackEl.className = 'feedback correct';
+            feedbackEl.innerHTML = `<div>⭐ Overridden — ${current.name}</div><div class="hint">Enter / Space for next</div>`;
+        }
+
+        // ---------------------------------------------------------------------------
+        // Theme & Event Listeners
+        // ---------------------------------------------------------------------------
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            localStorage.setItem('flagQuizTheme', isDark ? 'dark' : 'light');
+        }
+
+        function loadTheme() {
+            const saved = localStorage.getItem('flagQuizTheme');
+            if (saved === 'dark') {
+                document.body.classList.add('dark-mode');
+            }
+        }
+
+        themeToggle.addEventListener('click', toggleTheme);
+
+        document.querySelectorAll('.menu-btn[data-mode]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                startGame(e.target.dataset.mode);
+            });
+        });
+
+        backBtn.addEventListener('click', showMenu);
+
+        document.addEventListener('keydown', (e) => {
+            if (!isPlaying) return;
+
+            if (e.key === ' ' || e.code === 'Space') {
+                if (answered) {
+                    e.preventDefault();
+                    if (currentIndex < totalQuestions) {
+                        nextFlag();
+                    }
+                }
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (answered && !answeredCorrect) {
+                    overrideCorrect();
+                }
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                submitAnswer();
+            }
+        });
+
+        answerInput.addEventListener('input', () => {
+            if (answered || !current || !isPlaying) return;
+            const guess = normalize(answerInput.value);
+            if (!guess) return;
+
+            if (isCorrectGuess(guess)) {
+                if (!isPrefixOfAnother(guess)) {
+                    submitAnswer();
+                }
+            }
+        });
+
+        // Initialize
+        loadTheme();
+        generateBackground();
+        showMenu();
+    </script>
+
+</body>
+</html>
