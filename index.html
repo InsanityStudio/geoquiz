@@ -760,13 +760,17 @@
             }
         });
 
+        // Modified Auto-submit logic
         answerInput.addEventListener('input', () => {
             if (answered || !current || !isPlaying) return;
-            const guess = normalize(answerInput.value);
+            
+            const rawValue = answerInput.value;
+            const guess = normalize(rawValue);
             if (!guess) return;
 
             if (isCorrectGuess(guess)) {
-                if (!isPrefixOfAnother(guess)) {
+                // If the user just typed a space, or if it's not a prefix of another country
+                if (rawValue.endsWith(' ') || !isPrefixOfAnother(guess)) {
                     submitAnswer();
                 }
             }
