@@ -196,33 +196,3 @@ const COUNTRIES = [
     { code: 'zm', name: 'Zambia', aliases: ['zambia'] },
     { code: 'zw', name: 'Zimbabwe', aliases: ['zimbabwe'] }
 ];
-
-function normalize(str) {
-    return str.trim().toLowerCase().replace(/[-]/g, ' ').replace(/\s+/g, ' ');
-}
-
-const ALL_COUNTRY_STRINGS = [];
-COUNTRIES.forEach(c => {
-    ALL_COUNTRY_STRINGS.push(normalize(c.name));
-    c.aliases.forEach(a => ALL_COUNTRY_STRINGS.push(normalize(a)));
-});
-const UNIQUE_COUNTRY_STRINGS = [...new Set(ALL_COUNTRY_STRINGS)];
-
-function isPrefixOfAnother(guess) {
-    return UNIQUE_COUNTRY_STRINGS.some(str => str !== guess && str.startsWith(guess));
-}
-
-function generateBackground() {
-    const bgContainer = document.getElementById('flag-grid-bg');
-    if (!bgContainer) return;
-    
-    const codes = COUNTRIES.map(c => c.code);
-    const totalFlags = 3000; 
-    let html = '';
-    
-    for (let i = 0; i < totalFlags; i++) {
-        const randomCode = codes[Math.floor(Math.random() * codes.length)];
-        html += `<img src="https://flagcdn.com/w80/${randomCode}.png" alt="" loading="eager">`;
-    }
-    bgContainer.innerHTML = html;
-}
