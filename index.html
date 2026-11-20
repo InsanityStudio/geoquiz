@@ -16,7 +16,7 @@
             --shadow-color: #777;
             --grid-filter: blur(15px) opacity(0.8);
             --text-shadow: 0 2px 6px rgba(255, 255, 255, 0.8), 0 1px 3px rgba(0, 0, 0, 0.3);
-            --flag-scale: 1; /* Default 100% */
+            --flag-scale: 1;
             --modal-bg: rgba(255, 255, 255, 0.95);
         }
 
@@ -99,6 +99,7 @@
             text-shadow: var(--text-shadow);
             transition: all 0.3s;
             flex-shrink: 0;
+            z-index: 15;
         }
 
         .back-btn {
@@ -179,6 +180,7 @@
             justify-content: center;
             flex-shrink: 0;
             transition: all 0.3s;
+            z-index: 15;
         }
 
         /* FLOATING FEEDBACK */
@@ -207,7 +209,7 @@
         .feedback .reveal { font-size: 32px; color: #f59e0b; }
 
         /* INPUT BOX */
-        #answer-input {
+        #answer-input, .lookup-input {
             width: 100%;
             max-width: 600px;
             height: 65px;
@@ -225,7 +227,7 @@
             transition: all 0.3s;
         }
 
-        #answer-input::placeholder {
+        #answer-input::placeholder, .lookup-input::placeholder {
             color: #888;
         }
 
@@ -288,6 +290,52 @@
             height: 50px;
             font-size: 18px;
             margin-top: 10px;
+        }
+
+        /* LOOKUP MODE AREA */
+        #lookup-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 10px 20px 20px;
+            min-height: 0;
+            z-index: 10;
+        }
+
+        .lookup-content {
+            flex: 1;
+            display: flex;
+            gap: 20px;
+            min-height: 0;
+        }
+
+        .lookup-column {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            gap: 15px;
+            height: 100%;
+        }
+
+        .lookup-flag-box {
+            flex: 1;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 0;
+        }
+
+        .lookup-flag-box img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
+            transition: transform 0.2s ease-out;
+            transform: scale(var(--flag-scale));
+            display: none; /* Hidden until a match is found */
         }
 
         /* SETTINGS MODAL */
@@ -399,6 +447,7 @@
             <button class="menu-btn" data-mode="25">25 Flags</button>
             <button class="menu-btn" data-mode="50">50 Flags</button>
             <button class="menu-btn" data-mode="all">All Flags</button>
+            <button class="menu-btn" id="lookup-menu-btn" style="margin-top: 15px; background: #4ade80; color: #000; border-color: #22c55e; box-shadow: 0 4px 0 #16a34a, 0 6px 12px rgba(0,0,0,0.2);">Lookup Mode</button>
         </div>
 
         <!-- Game Area -->
@@ -412,14 +461,12 @@
                     <div id="progress-display">1/25</div>
                 </div>
                 <div class="top-actions">
-                    <!-- Settings Button -->
                     <div class="icon-btn" id="settings-btn" title="Settings">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                             <circle cx="12" cy="12" r="3"></circle>
                             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
                         </svg>
                     </div>
-                    <!-- Theme Toggle -->
                     <div class="icon-btn theme-toggle" id="theme-toggle" title="Toggle Theme">
                         <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
@@ -458,6 +505,30 @@
                 >
             </div>
 
+        </div>
+
+        <!-- Lookup Area -->
+        <div id="lookup-area" class="hidden">
+            <div class="top-bar">
+                <div class="back-btn" id="lookup-back-btn">◀</div>
+                <div style="font-size: 24px; flex: 1; text-align: center; padding-right: 40px; text-shadow: var(--text-shadow);">Lookup Mode</div>
+            </div>
+            <div class="lookup-content">
+                <!-- Column 1 -->
+                <div class="lookup-column">
+                    <div class="lookup-flag-box">
+                        <img id="lookup-flag-1" src="" alt="Flag 1">
+                    </div>
+                    <input type="text" class="lookup-input" id="lookup-input-1" placeholder="Country 1..." autocomplete="off" spellcheck="false">
+                </div>
+                <!-- Column 2 -->
+                <div class="lookup-column">
+                    <div class="lookup-flag-box">
+                        <img id="lookup-flag-2" src="" alt="Flag 2">
+                    </div>
+                    <input type="text" class="lookup-input" id="lookup-input-2" placeholder="Country 2..." autocomplete="off" spellcheck="false">
+                </div>
+            </div>
         </div>
     </div>
 
@@ -522,6 +593,16 @@
             img.src = flagUrl(code);
         }
 
+        // Find country object from string (exact match on name or alias)
+        function findCountry(str) {
+            const guess = normalize(str);
+            if (!guess) return null;
+            return COUNTRIES.find(c => 
+                normalize(c.name) === guess || 
+                c.aliases.some(a => normalize(a) === guess)
+            );
+        }
+
         // ---------------------------------------------------------------------------
         // Game State
         // ---------------------------------------------------------------------------
@@ -544,7 +625,10 @@
         
         const mainMenu = document.getElementById('main-menu');
         const gameArea = document.getElementById('game-area');
+        const lookupArea = document.getElementById('lookup-area');
+        
         const backBtn = document.getElementById('back-btn');
+        const lookupBackBtn = document.getElementById('lookup-back-btn');
         const themeToggle = document.getElementById('theme-toggle');
         
         // Settings DOM Elements
@@ -553,6 +637,13 @@
         const closeSettingsBtn = document.getElementById('close-settings-btn');
         const scaleSlider = document.getElementById('scale-slider');
         const scaleValue = document.getElementById('scale-value');
+
+        // Lookup DOM Elements
+        const lookupMenuBtn = document.getElementById('lookup-menu-btn');
+        const lookupInput1 = document.getElementById('lookup-input-1');
+        const lookupInput2 = document.getElementById('lookup-input-2');
+        const lookupFlag1 = document.getElementById('lookup-flag-1');
+        const lookupFlag2 = document.getElementById('lookup-flag-2');
 
         // ---------------------------------------------------------------------------
         // Game Flow
@@ -576,11 +667,13 @@
             isPlaying = false;
             mainMenu.classList.remove('hidden');
             gameArea.classList.add('hidden');
+            lookupArea.classList.add('hidden');
         }
 
         function startGame(mode) {
             isPlaying = true;
             mainMenu.classList.add('hidden');
+            lookupArea.classList.add('hidden');
             gameArea.classList.remove('hidden');
             
             totalQuestions = mode === 'all' ? COUNTRIES.length : parseInt(mode);
@@ -682,6 +775,40 @@
         }
 
         // ---------------------------------------------------------------------------
+        // Lookup Logic
+        // ---------------------------------------------------------------------------
+        function showLookup() {
+            isPlaying = false;
+            mainMenu.classList.add('hidden');
+            gameArea.classList.add('hidden');
+            lookupArea.classList.remove('hidden');
+            
+            // Reset lookup
+            lookupInput1.value = '';
+            lookupInput2.value = '';
+            lookupFlag1.style.display = 'none';
+            lookupFlag2.style.display = 'none';
+            lookupFlag1.src = '';
+            lookupFlag2.src = '';
+            
+            lookupInput1.focus();
+        }
+
+        function handleLookupInput(inputEl, imgEl) {
+            const val = inputEl.value;
+            const country = findCountry(val);
+            if (country) {
+                imgEl.src = flagUrl(country.code);
+                imgEl.style.display = 'block';
+            } else {
+                imgEl.style.display = 'none';
+            }
+        }
+
+        lookupInput1.addEventListener('input', () => handleLookupInput(lookupInput1, lookupFlag1));
+        lookupInput2.addEventListener('input', () => handleLookupInput(lookupInput2, lookupFlag2));
+
+        // ---------------------------------------------------------------------------
         // Settings & Theme Logic
         // ---------------------------------------------------------------------------
         function toggleTheme() {
@@ -724,20 +851,22 @@
         settingsBtn.addEventListener('click', openSettings);
         closeSettingsBtn.addEventListener('click', closeSettings);
         
-        // Close modal if clicking outside the content box
         settingsModal.addEventListener('click', (e) => {
             if (e.target === settingsModal) closeSettings();
         });
 
         themeToggle.addEventListener('click', toggleTheme);
 
+        // Menu & Navigation Buttons
         document.querySelectorAll('.menu-btn[data-mode]').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 startGame(e.target.dataset.mode);
             });
         });
 
+        lookupMenuBtn.addEventListener('click', showLookup);
         backBtn.addEventListener('click', showMenu);
+        lookupBackBtn.addEventListener('click', showMenu);
 
         document.addEventListener('keydown', (e) => {
             if (!isPlaying || !settingsModal.classList.contains('hidden')) return;
@@ -760,7 +889,7 @@
             }
         });
 
-        // Modified Auto-submit logic
+        // Auto-submit logic
         answerInput.addEventListener('input', () => {
             if (answered || !current || !isPlaying) return;
             
