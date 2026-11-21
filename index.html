@@ -161,13 +161,40 @@
             position: relative;
         }
 
-        .flag-area img {
+        /* Container to keep image and cover aligned */
+        .flag-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transform: scale(var(--flag-scale));
+            transition: transform 0.2s ease-out;
+        }
+
+        .flag-container img {
             width: 100%;
             height: 100%;
             object-fit: contain;
             filter: drop-shadow(0 15px 30px rgba(0,0,0,0.6));
-            transition: opacity 0.3s, transform 0.2s ease-out;
-            transform: scale(var(--flag-scale));
+            transition: opacity 0.3s;
+        }
+
+        /* The frosted glass cover for flags with text */
+        .center-cover {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 22%;
+            height: 32%;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            pointer-events: none;
+            display: none;
         }
 
         /* BOTTOM BAR */
@@ -326,15 +353,25 @@
             justify-content: center;
             align-items: center;
             min-height: 0;
+            position: relative;
         }
 
-        .lookup-flag-box img {
+        .lookup-flag-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transform: scale(var(--flag-scale));
+            transition: transform 0.2s ease-out;
+        }
+
+        .lookup-flag-container img {
             max-width: 100%;
             max-height: 100%;
             object-fit: contain;
             filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
-            transition: transform 0.2s ease-out;
-            transform: scale(var(--flag-scale));
             display: none; /* Hidden until a match is found */
         }
 
@@ -488,7 +525,10 @@
 
             <!-- Flag Area -->
             <div class="flag-area">
-                <img id="flag-img" src="" alt="Flag">
+                <div class="flag-container">
+                    <img id="flag-img" src="" alt="Flag">
+                    <div class="center-cover" id="flag-cover"></div>
+                </div>
             </div>
 
             <!-- Bottom Bar -->
@@ -517,14 +557,20 @@
                 <!-- Column 1 -->
                 <div class="lookup-column">
                     <div class="lookup-flag-box">
-                        <img id="lookup-flag-1" src="" alt="Flag 1">
+                        <div class="lookup-flag-container">
+                            <img id="lookup-flag-1" src="" alt="Flag 1">
+                            <div class="center-cover" id="lookup-cover-1"></div>
+                        </div>
                     </div>
                     <input type="text" class="lookup-input" id="lookup-input-1" placeholder="Country 1..." autocomplete="off" spellcheck="false">
                 </div>
                 <!-- Column 2 -->
                 <div class="lookup-column">
                     <div class="lookup-flag-box">
-                        <img id="lookup-flag-2" src="" alt="Flag 2">
+                        <div class="lookup-flag-container">
+                            <img id="lookup-flag-2" src="" alt="Flag 2">
+                            <div class="center-cover" id="lookup-cover-2"></div>
+                        </div>
                     </div>
                     <input type="text" class="lookup-input" id="lookup-input-2" placeholder="Country 2..." autocomplete="off" spellcheck="false">
                 </div>
@@ -552,7 +598,6 @@
         // Helpers & Setup
         // ---------------------------------------------------------------------------
         function normalize(str) {
-            // This handles case insensitivity, trims spaces, and standardizes hyphens
             return str.trim().toLowerCase().replace(/[-]/g, ' ').replace(/\s+/g, ' ');
         }
 
@@ -603,6 +648,9 @@
             );
         }
 
+        // List of codes where the text/name is on the flag
+        const CODES_TO_HIDE = ['sv', 'ni', 'py', 'bz'];
+
         // ---------------------------------------------------------------------------
         // Game State
         // ---------------------------------------------------------------------------
@@ -618,6 +666,7 @@
 
         // DOM Elements
         const flagImg = document.getElementById('flag-img');
+        const flagCover = document.getElementById('flag-cover');
         const answerInput = document.getElementById('answer-input');
         const feedbackEl = document.getElementById('feedback');
         const scoreDisplay = document.getElementById('score-display');
@@ -644,6 +693,8 @@
         const lookupInput2 = document.getElementById('lookup-input-2');
         const lookupFlag1 = document.getElementById('lookup-flag-1');
         const lookupFlag2 = document.getElementById('lookup-flag-2');
+        const lookupCover1 = document.getElementById('lookup-cover-1');
+        const lookupCover2 = document.getElementById('lookup-cover-2');
 
         // ---------------------------------------------------------------------------
         // Game Flow
@@ -693,6 +744,7 @@
                 answerInput.disabled = true;
                 flagImg.src = 'https://flagcdn.com/w1280/un.png';
                 flagImg.style.opacity = '0.3';
+                flagCover.style.display = 'none';
                 feedbackEl.className = 'feedback correct';
                 feedbackEl.innerHTML = `
                     <div class="reveal">Finished!</div>
@@ -715,6 +767,13 @@
             flagImg.src = flagUrl(current.code);
             flagImg.alt = 'Flag';
             flagImg.style.opacity = '1';
+            
+            // Show blur overlay if it's one of the text flags
+            if (CODES_TO_HIDE.includes(current.code)) {
+                flagCover.style.display = 'block';
+            } else {
+                flagCover.style.display = 'none';
+            }
 
             answerInput.value = '';
             answerInput.disabled = false;
@@ -787,25 +846,34 @@
             lookupInput2.value = '';
             lookupFlag1.style.display = 'none';
             lookupFlag2.style.display = 'none';
+            lookupCover1.style.display = 'none';
+            lookupCover2.style.display = 'none';
             lookupFlag1.src = '';
             lookupFlag2.src = '';
             
             lookupInput1.focus();
         }
 
-        function handleLookupInput(inputEl, imgEl) {
+        function handleLookupInput(inputEl, imgEl, coverEl) {
             const val = inputEl.value;
             const country = findCountry(val);
             if (country) {
                 imgEl.src = flagUrl(country.code);
                 imgEl.style.display = 'block';
+                
+                if (CODES_TO_HIDE.includes(country.code)) {
+                    coverEl.style.display = 'block';
+                } else {
+                    coverEl.style.display = 'none';
+                }
             } else {
                 imgEl.style.display = 'none';
+                coverEl.style.display = 'none';
             }
         }
 
-        lookupInput1.addEventListener('input', () => handleLookupInput(lookupInput1, lookupFlag1));
-        lookupInput2.addEventListener('input', () => handleLookupInput(lookupInput2, lookupFlag2));
+        lookupInput1.addEventListener('input', () => handleLookupInput(lookupInput1, lookupFlag1, lookupCover1));
+        lookupInput2.addEventListener('input', () => handleLookupInput(lookupInput2, lookupFlag2, lookupCover2));
 
         // ---------------------------------------------------------------------------
         // Settings & Theme Logic
