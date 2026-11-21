@@ -552,6 +552,7 @@
         // Helpers & Setup
         // ---------------------------------------------------------------------------
         function normalize(str) {
+            // This handles case insensitivity, trims spaces, and standardizes hyphens
             return str.trim().toLowerCase().replace(/[-]/g, ' ').replace(/\s+/g, ' ');
         }
 
@@ -593,7 +594,6 @@
             img.src = flagUrl(code);
         }
 
-        // Find country object from string (exact match on name or alias)
         function findCountry(str) {
             const guess = normalize(str);
             if (!guess) return null;
@@ -783,7 +783,6 @@
             gameArea.classList.add('hidden');
             lookupArea.classList.remove('hidden');
             
-            // Reset lookup
             lookupInput1.value = '';
             lookupInput2.value = '';
             lookupFlag1.style.display = 'none';
@@ -898,7 +897,6 @@
             if (!guess) return;
 
             if (isCorrectGuess(guess)) {
-                // If the user just typed a space, or if it's not a prefix of another country
                 if (rawValue.endsWith(' ') || !isPrefixOfAnother(guess)) {
                     submitAnswer();
                 }
