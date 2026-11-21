@@ -187,14 +187,32 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 22%;
-            height: 32%;
-            border-radius: 50%;
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             pointer-events: none;
             display: none;
+            border-radius: 8px;
+            /* Default size, overridden by specific classes */
+        }
+
+        /* Specific sizes for the text/coat of arms */
+        .center-cover.sv,
+        .center-cover.ni {
+            width: 16%;
+            height: 18%;
+        }
+
+        .center-cover.py {
+            width: 10%;
+            height: 12%;
+            border-radius: 50%;
+        }
+
+        .center-cover.bz {
+            width: 26%;
+            height: 26%;
+            border-radius: 50%;
         }
 
         /* BOTTOM BAR */
@@ -768,9 +786,11 @@
             flagImg.alt = 'Flag';
             flagImg.style.opacity = '1';
             
-            // Show blur overlay if it's one of the text flags
+            // Apply specific blur class if needed
+            flagCover.className = 'center-cover';
             if (CODES_TO_HIDE.includes(current.code)) {
                 flagCover.style.display = 'block';
+                flagCover.classList.add(current.code); 
             } else {
                 flagCover.style.display = 'none';
             }
@@ -861,8 +881,10 @@
                 imgEl.src = flagUrl(country.code);
                 imgEl.style.display = 'block';
                 
+                coverEl.className = 'center-cover';
                 if (CODES_TO_HIDE.includes(country.code)) {
                     coverEl.style.display = 'block';
+                    coverEl.classList.add(country.code);
                 } else {
                     coverEl.style.display = 'none';
                 }
