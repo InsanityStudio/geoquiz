@@ -7,11 +7,10 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <title>World Quiz</title>
     
-    <!-- amCharts 5 Libraries for Map Mode -->
+    <!-- amCharts 5 Libraries (Removed Animated theme for performance) -->
     <script src="https://cdn.amcharts.com/lib/5/index.js"></script>
     <script src="https://cdn.amcharts.com/lib/5/map.js"></script>
     <script src="https://cdn.amcharts.com/lib/5/geodata/worldLow.js"></script>
-    <script src="https://cdn.amcharts.com/lib/5/themes/Animated.js"></script>
 
     <style>
         :root {
@@ -688,15 +687,13 @@
 
             const root = am5.Root.new("chartdiv");
             
-            root.setThemes([
-                am5themes_Animated.new(root)
-            ]);
+            // No theme for maximum performance
 
             chart = root.container.children.push(am5map.MapChart.new(root, {
-                panX: "none",
-                panY: "none",
-                projection: am5map.geoMercator(),
-                background: am5.Rectangle.new(root, { fill: am5.color(0x000000), fillOpacity: 0 }) // Transparent background
+                panX: "translateX",   // Re-enable panning
+                panY: "translateY",   // Re-enable panning
+                wheelY: "zoom",       // Re-enable scrolling to zoom
+                projection: am5map.geoMercator()
             }));
 
             polygonSeries = chart.series.push(am5map.MapPolygonSeries.new(root, {
@@ -704,19 +701,12 @@
                 exclude: ["AQ"] // Exclude Antarctica
             }));
 
-            // Removed tooltipText so hovering doesn't reveal the country name
+            // No tooltipText here, so hovering doesn't reveal the country name
             polygonSeries.mapPolygons.template.setAll({
                 fill: am5.color(getComputedStyle(document.documentElement).getPropertyValue('--map-country-fill').trim()),
                 stroke: am5.color(getComputedStyle(document.documentElement).getPropertyValue('--map-country-stroke').trim()),
                 strokeWidth: 0.5
             });
-
-            // Completely disable interactions
-            chart.seriesContainer.draggable = false;
-            chart.seriesContainer.resizable = false;
-            chart.seriesContainer.wheelable = false;
-            chart.seriesContainer.pinchable = false;
-            chart.set("zoomLevel", 1);
         }
 
         function updateMapTheme() {
@@ -743,7 +733,7 @@
                 currentHighlightedPolygon.set("stroke", am5.color(isDark ? "#1e293b" : "#1a252f"));
             }
 
-            // Find the polygon for the given ISO code (amCharts uses uppercase ISO codes)
+            // Find the polygon for the given ISO code
             const dataItem = polygonSeries.getDataItemById(code.toUpperCase());
             
             if (dataItem) {
@@ -753,6 +743,10 @@
                     polygon.set("fill", am5.color(highlightColor));
                     polygon.set("stroke", am5.color("#000000"));
                     currentHighlightedPolygon = polygon;
+
+                    // Auto-zoom to the highlighted country
+                    // 2.5 is a good zoom level, center=true, duration=1000ms
+                    chart.zoomToMapObject(polygon, 2.5, true, 1000);
                 }
             } else {
                 console.warn("Country not found on map:", code);
@@ -841,7 +835,10 @@
                 flagArea.classList.add('hidden');
                 mapArea.classList.remove('hidden');
                 // Delay map init slightly to allow DOM to render
-                setTimeout(initMap, 50); 
+                setTimeout(() => {
+                    initMap();
+                    chart.set("zoomLevel", 1); // Reset zoom for new game
+                }, 50); 
             } else {
                 flagArea.classList.remove('hidden');
                 mapArea.classList.add('hidden');
