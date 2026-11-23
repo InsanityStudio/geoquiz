@@ -697,8 +697,7 @@
                 projection: am5map.geoMercator()
             }));
 
-            // THIS is the magic number that makes zooming slower.
-            // Default is 2. The closer to 1, the slower/smoother the zoom.
+            // Smooth slow zoom
             chart.set("zoomStep", 1.15);
 
             polygonSeries = chart.series.push(am5map.MapPolygonSeries.new(root, {
@@ -728,13 +727,14 @@
         }
 
         function highlightCountry(code) {
-            if (!polygonSeries) return;
+            if (!polygonSeries || !chart) return;
 
             // Reset previous highlight
             if (currentHighlightedPolygon) {
                 const isDark = document.body.classList.contains('dark-mode');
                 currentHighlightedPolygon.set("fill", am5.color(isDark ? "#334155" : "#2c3e50"));
                 currentHighlightedPolygon.set("stroke", am5.color(isDark ? "#1e293b" : "#1a252f"));
+                currentHighlightedPolygon = null;
             }
 
             // Find the polygon for the given ISO code
@@ -748,14 +748,20 @@
                     polygon.set("stroke", am5.color("#000000"));
                     currentHighlightedPolygon = polygon;
 
-                    if (chart) {
-                        // Zoom level 'undefined' tells amCharts to auto-fit the bounds
-                        // Duration is 800ms for a smooth transition
-                        chart.zoomToMapObject(polygon, undefined, true, 800);
-                    }
+                    // Force resize in case the map was hidden previously
+                    chart.resize();
+
+                    // Delay zoom slightly to ensure bounds are calculated
+                    setTimeout(() => {
+                        try {
+                            // undefined auto-fits the country, 1000ms smooth animation
+                            chart.zoomToMapObject(polygon, undefined, true, 1000);
+                        } catch (e) {
+                            console.warn("Auto-zoom failed, using fixed zoom", e);
+                            chart.zoomToMapObject(polygon, 4, true, 1000);
+                        }
+                    }, 150);
                 }
-            } else {
-                console.warn("Country not found on map:", code);
             }
         }
 
@@ -841,7 +847,10 @@
                 flagArea.classList.add('hidden');
                 mapArea.classList.remove('hidden');
                 if (!chart) initMap();
-                if (chart) chart.set("zoomLevel", 1); // Reset zoom to world view
+                if (chart) {
+                    chart.resize();
+                    chart.goHome(0); // Instantly reset to world view
+                }
             } else {
                 flagArea.classList.remove('hidden');
                 mapArea.classList.add('hidden');
@@ -883,6 +892,15 @@
             answered = false;
             answeredCorrect = false;
 
+            // 1. Reset Input First (Guarantees the text box unlocks)
+            answerInput.value = '';
+            answerInput.disabled = false; 
+            feedbackEl.className = 'feedback';
+            feedbackEl.innerHTML = '';
+            updateTopBar();
+            answerInput.focus();
+
+            // 2. Update Visuals
             if (currentMode === 'map') {
                 highlightCountry(current.code);
             } else {
@@ -891,13 +909,6 @@
                 flagImg.style.opacity = '1';
             }
 
-            answerInput.value = '';
-            answerInput.disabled = false;
-            feedbackEl.className = 'feedback';
-            feedbackEl.innerHTML = '';
-            
-            updateTopBar();
-            answerInput.focus();
             preloadUpcoming();
         }
 
