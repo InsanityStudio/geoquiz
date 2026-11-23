@@ -5,12 +5,13 @@
     <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=0, minimal-ui">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>Flags of the World Quiz</title>
+    <title>World Quiz</title>
     
     <!-- amCharts 5 Libraries for Map Mode -->
     <script src="https://cdn.amcharts.com/lib/5/index.js"></script>
     <script src="https://cdn.amcharts.com/lib/5/map.js"></script>
     <script src="https://cdn.amcharts.com/lib/5/geodata/worldLow.js"></script>
+    <script src="https://cdn.amcharts.com/lib/5/themes/Animated.js"></script>
 
     <style>
         :root {
@@ -197,8 +198,6 @@
         #chartdiv {
             width: 100%;
             height: 100%;
-            max-width: 1200px;
-            max-height: 800px;
             border-radius: 16px;
             overflow: hidden;
         }
@@ -282,31 +281,51 @@
             justify-content: center;
             align-items: center;
             gap: 20px;
-            background: rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(5px);
-            -webkit-backdrop-filter: blur(5px);
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             z-index: 20;
             transition: all 0.3s;
         }
 
         #main-menu h1 {
             color: #fff;
-            font-size: 42px;
+            font-size: 48px;
             text-align: center;
-            margin-bottom: 20px;
-            text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+            margin-bottom: 10px;
+            text-shadow: 0 4px 15px rgba(0,0,0,0.8);
             line-height: 1.2;
         }
 
+        .menu-columns {
+            display: flex;
+            gap: 40px;
+            margin-bottom: 15px;
+        }
+
+        .menu-column {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .menu-column h2 {
+            color: #fff;
+            font-size: 24px;
+            margin-bottom: 5px;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.8);
+        }
+
         .menu-btn {
-            width: 300px;
-            height: 65px;
+            width: 220px;
+            height: 55px;
             background: var(--input-bg);
             border: 1px solid var(--input-border);
             border-radius: 8px;
             box-shadow: 0 4px 0 var(--shadow-color), 0 6px 12px rgba(0,0,0,0.2);
             font-family: inherit;
-            font-size: 22px;
+            font-size: 20px;
             font-weight: bold;
             color: var(--input-text);
             cursor: pointer;
@@ -475,13 +494,29 @@
         
         <!-- Main Menu -->
         <div id="main-menu">
-            <h1>Flags of the<br>World Quiz</h1>
-            <button class="menu-btn" data-mode="10">10 Flags</button>
-            <button class="menu-btn" data-mode="25">25 Flags</button>
-            <button class="menu-btn" data-mode="50">50 Flags</button>
-            <button class="menu-btn" data-mode="all">All Flags</button>
-            <button class="menu-btn" id="map-menu-btn" style="margin-top: 15px; background: #f59e0b; color: #000; border-color: #d97706; box-shadow: 0 4px 0 #b45309, 0 6px 12px rgba(0,0,0,0.2);">Map Mode</button>
-            <button class="menu-btn" id="lookup-menu-btn" style="margin-top: 15px; background: #4ade80; color: #000; border-color: #22c55e; box-shadow: 0 4px 0 #16a34a, 0 6px 12px rgba(0,0,0,0.2);">Lookup Mode</button>
+            <h1>World Quiz</h1>
+            
+            <div class="menu-columns">
+                <!-- Flag Section -->
+                <div class="menu-column">
+                    <h2>Flags</h2>
+                    <button class="menu-btn" data-mode="10" data-type="flag">10 Flags</button>
+                    <button class="menu-btn" data-mode="25" data-type="flag">25 Flags</button>
+                    <button class="menu-btn" data-mode="50" data-type="flag">50 Flags</button>
+                    <button class="menu-btn" data-mode="all" data-type="flag">All Flags</button>
+                </div>
+                
+                <!-- Map Section -->
+                <div class="menu-column">
+                    <h2>Maps</h2>
+                    <button class="menu-btn" data-mode="10" data-type="map">10 Maps</button>
+                    <button class="menu-btn" data-mode="25" data-type="map">25 Maps</button>
+                    <button class="menu-btn" data-mode="50" data-type="map">50 Maps</button>
+                    <button class="menu-btn" data-mode="all" data-type="map">All Maps</button>
+                </div>
+            </div>
+
+            <button class="menu-btn" id="lookup-menu-btn" style="background: #4ade80; color: #000; border-color: #22c55e; box-shadow: 0 4px 0 #16a34a, 0 6px 12px rgba(0,0,0,0.2); margin-top: 10px;">Lookup Mode</button>
         </div>
 
         <!-- Game Area -->
@@ -653,21 +688,20 @@
 
             const root = am5.Root.new("chartdiv");
             
-            // Set theme based on current mode
-            const isDark = document.body.classList.contains('dark-mode');
             root.setThemes([
                 am5themes_Animated.new(root)
             ]);
 
             chart = root.container.children.push(am5map.MapChart.new(root, {
-                panX: "translateX",
-                panY: "translateY",
-                projection: am5map.geoMercator()
+                panX: "none",
+                panY: "none",
+                projection: am5map.geoMercator(),
+                background: am5.Rectangle.new(root, { fill: am5.color(0x000000), fillOpacity: 0 }) // Transparent background
             }));
 
             polygonSeries = chart.series.push(am5map.MapPolygonSeries.new(root, {
                 geoJSON: am5geodata_worldLow,
-                exclude: ["AQ"] // Exclude Antarctica for better view
+                exclude: ["AQ"] // Exclude Antarctica
             }));
 
             polygonSeries.mapPolygons.template.setAll({
@@ -677,7 +711,7 @@
                 tooltipText: "{name}"
             });
 
-            // Disable zoom/pan to keep the map static for guessing
+            // Disable dragging and zooming for a fixed view
             chart.seriesContainer.draggable = false;
             chart.seriesContainer.resizable = false;
             chart.set("zoomLevel", 1);
@@ -707,8 +741,9 @@
                 currentHighlightedPolygon.set("stroke", am5.color(isDark ? "#1e293b" : "#1a252f"));
             }
 
-            // Find the polygon for the given ISO code
-            const dataItem = polygonSeries.getDataItemById(code);
+            // Find the polygon for the given ISO code (amCharts uses uppercase ISO codes)
+            const dataItem = polygonSeries.getDataItemById(code.toUpperCase());
+            
             if (dataItem) {
                 const polygon = dataItem.get("mapPolygon");
                 if (polygon) {
@@ -767,9 +802,6 @@
         const lookupFlag1 = document.getElementById('lookup-flag-1');
         const lookupFlag2 = document.getElementById('lookup-flag-2');
 
-        // Map Mode Button
-        const mapMenuBtn = document.getElementById('map-menu-btn');
-
         // ---------------------------------------------------------------------------
         // Game Flow
         // ---------------------------------------------------------------------------
@@ -806,7 +838,8 @@
             if (type === 'map') {
                 flagArea.classList.add('hidden');
                 mapArea.classList.remove('hidden');
-                initMap();
+                // Delay map init slightly to allow DOM to render
+                setTimeout(initMap, 50); 
             } else {
                 flagArea.classList.remove('hidden');
                 mapArea.classList.add('hidden');
@@ -998,12 +1031,8 @@
         // Menu & Navigation Buttons
         document.querySelectorAll('.menu-btn[data-mode]').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                startGame(e.target.dataset.mode, 'flag');
+                startGame(e.target.dataset.mode, e.target.dataset.type);
             });
-        });
-
-        mapMenuBtn.addEventListener('click', () => {
-            startGame('10', 'map'); // Default to 10 questions for Map Mode
         });
 
         lookupMenuBtn.addEventListener('click', showLookup);
