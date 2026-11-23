@@ -6,6 +6,12 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <title>Flags of the World Quiz</title>
+    
+    <!-- amCharts 5 Libraries for Map Mode -->
+    <script src="https://cdn.amcharts.com/lib/5/index.js"></script>
+    <script src="https://cdn.amcharts.com/lib/5/map.js"></script>
+    <script src="https://cdn.amcharts.com/lib/5/geodata/worldLow.js"></script>
+
     <style>
         :root {
             --bg-color: #33ccff;
@@ -18,6 +24,9 @@
             --text-shadow: 0 2px 6px rgba(255, 255, 255, 0.8), 0 1px 3px rgba(0, 0, 0, 0.3);
             --flag-scale: 1;
             --modal-bg: rgba(255, 255, 255, 0.95);
+            --map-country-fill: #2c3e50;
+            --map-country-stroke: #1a252f;
+            --map-highlight-fill: #f1c40f;
         }
 
         body.dark-mode {
@@ -30,6 +39,9 @@
             --grid-filter: blur(15px) opacity(0.4) brightness(0.6);
             --text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9), 0 0 10px rgba(0,0,0,0.5);
             --modal-bg: rgba(30, 41, 59, 0.95);
+            --map-country-fill: #334155;
+            --map-country-stroke: #1e293b;
+            --map-highlight-fill: #fbbf24;
         }
 
         * {
@@ -168,6 +180,27 @@
             filter: drop-shadow(0 15px 30px rgba(0,0,0,0.6));
             transition: opacity 0.3s, transform 0.2s ease-out;
             transform: scale(var(--flag-scale));
+        }
+
+        /* MIDDLE - MAP AREA */
+        #map-area {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 5px;
+            min-height: 0; 
+            position: relative;
+            z-index: 10;
+        }
+
+        #chartdiv {
+            width: 100%;
+            height: 100%;
+            max-width: 1200px;
+            max-height: 800px;
+            border-radius: 16px;
+            overflow: hidden;
         }
 
         /* BOTTOM BAR */
@@ -447,6 +480,7 @@
             <button class="menu-btn" data-mode="25">25 Flags</button>
             <button class="menu-btn" data-mode="50">50 Flags</button>
             <button class="menu-btn" data-mode="all">All Flags</button>
+            <button class="menu-btn" id="map-menu-btn" style="margin-top: 15px; background: #f59e0b; color: #000; border-color: #d97706; box-shadow: 0 4px 0 #b45309, 0 6px 12px rgba(0,0,0,0.2);">Map Mode</button>
             <button class="menu-btn" id="lookup-menu-btn" style="margin-top: 15px; background: #4ade80; color: #000; border-color: #22c55e; box-shadow: 0 4px 0 #16a34a, 0 6px 12px rgba(0,0,0,0.2);">Lookup Mode</button>
         </div>
 
@@ -486,9 +520,14 @@
                 </div>
             </div>
 
-            <!-- Flag Area -->
-            <div class="flag-area">
+            <!-- Flag Area (Default) -->
+            <div class="flag-area" id="flag-area">
                 <img id="flag-img" src="" alt="Flag">
+            </div>
+
+            <!-- Map Area (Hidden by default) -->
+            <div id="map-area" class="hidden">
+                <div id="chartdiv"></div>
             </div>
 
             <!-- Bottom Bar -->
@@ -552,7 +591,6 @@
         // Helpers & Setup
         // ---------------------------------------------------------------------------
         function normalize(str) {
-            // This handles case insensitivity, trims spaces, and standardizes hyphens
             return str.trim().toLowerCase().replace(/[-]/g, ' ').replace(/\s+/g, ' ');
         }
 
@@ -604,6 +642,87 @@
         }
 
         // ---------------------------------------------------------------------------
+        // Map Mode Logic (amCharts)
+        // ---------------------------------------------------------------------------
+        let chart = null;
+        let polygonSeries = null;
+        let currentHighlightedPolygon = null;
+
+        function initMap() {
+            if (chart) return; // Already initialized
+
+            const root = am5.Root.new("chartdiv");
+            
+            // Set theme based on current mode
+            const isDark = document.body.classList.contains('dark-mode');
+            root.setThemes([
+                am5themes_Animated.new(root)
+            ]);
+
+            chart = root.container.children.push(am5map.MapChart.new(root, {
+                panX: "translateX",
+                panY: "translateY",
+                projection: am5map.geoMercator()
+            }));
+
+            polygonSeries = chart.series.push(am5map.MapPolygonSeries.new(root, {
+                geoJSON: am5geodata_worldLow,
+                exclude: ["AQ"] // Exclude Antarctica for better view
+            }));
+
+            polygonSeries.mapPolygons.template.setAll({
+                fill: am5.color(getComputedStyle(document.documentElement).getPropertyValue('--map-country-fill').trim()),
+                stroke: am5.color(getComputedStyle(document.documentElement).getPropertyValue('--map-country-stroke').trim()),
+                strokeWidth: 0.5,
+                tooltipText: "{name}"
+            });
+
+            // Disable zoom/pan to keep the map static for guessing
+            chart.seriesContainer.draggable = false;
+            chart.seriesContainer.resizable = false;
+            chart.set("zoomLevel", 1);
+        }
+
+        function updateMapTheme() {
+            if (!polygonSeries) return;
+            const isDark = document.body.classList.contains('dark-mode');
+            const fill = isDark ? "#334155" : "#2c3e50";
+            const stroke = isDark ? "#1e293b" : "#1a252f";
+            
+            polygonSeries.mapPolygons.each((polygon) => {
+                if (polygon !== currentHighlightedPolygon) {
+                    polygon.set("fill", am5.color(fill));
+                    polygon.set("stroke", am5.color(stroke));
+                }
+            });
+        }
+
+        function highlightCountry(code) {
+            if (!polygonSeries) return;
+
+            // Reset previous highlight
+            if (currentHighlightedPolygon) {
+                const isDark = document.body.classList.contains('dark-mode');
+                currentHighlightedPolygon.set("fill", am5.color(isDark ? "#334155" : "#2c3e50"));
+                currentHighlightedPolygon.set("stroke", am5.color(isDark ? "#1e293b" : "#1a252f"));
+            }
+
+            // Find the polygon for the given ISO code
+            const dataItem = polygonSeries.getDataItemById(code);
+            if (dataItem) {
+                const polygon = dataItem.get("mapPolygon");
+                if (polygon) {
+                    const highlightColor = getComputedStyle(document.documentElement).getPropertyValue('--map-highlight-fill').trim();
+                    polygon.set("fill", am5.color(highlightColor));
+                    polygon.set("stroke", am5.color("#000000"));
+                    currentHighlightedPolygon = polygon;
+                }
+            } else {
+                console.warn("Country not found on map:", code);
+            }
+        }
+
+        // ---------------------------------------------------------------------------
         // Game State
         // ---------------------------------------------------------------------------
         let remaining = [];
@@ -612,6 +731,7 @@
         let currentIndex = 0;
         let totalQuestions = 25;
         let isPlaying = false;
+        let currentMode = 'flag'; // 'flag' or 'map'
         
         let answered = false;
         let answeredCorrect = false;
@@ -626,6 +746,8 @@
         const mainMenu = document.getElementById('main-menu');
         const gameArea = document.getElementById('game-area');
         const lookupArea = document.getElementById('lookup-area');
+        const flagArea = document.getElementById('flag-area');
+        const mapArea = document.getElementById('map-area');
         
         const backBtn = document.getElementById('back-btn');
         const lookupBackBtn = document.getElementById('lookup-back-btn');
@@ -644,6 +766,9 @@
         const lookupInput2 = document.getElementById('lookup-input-2');
         const lookupFlag1 = document.getElementById('lookup-flag-1');
         const lookupFlag2 = document.getElementById('lookup-flag-2');
+
+        // Map Mode Button
+        const mapMenuBtn = document.getElementById('map-menu-btn');
 
         // ---------------------------------------------------------------------------
         // Game Flow
@@ -670,11 +795,22 @@
             lookupArea.classList.add('hidden');
         }
 
-        function startGame(mode) {
+        function startGame(mode, type = 'flag') {
             isPlaying = true;
+            currentMode = type;
             mainMenu.classList.add('hidden');
             lookupArea.classList.add('hidden');
             gameArea.classList.remove('hidden');
+            
+            // Toggle UI based on mode
+            if (type === 'map') {
+                flagArea.classList.add('hidden');
+                mapArea.classList.remove('hidden');
+                initMap();
+            } else {
+                flagArea.classList.remove('hidden');
+                mapArea.classList.add('hidden');
+            }
             
             totalQuestions = mode === 'all' ? COUNTRIES.length : parseInt(mode);
             remaining = shuffle(COUNTRIES);
@@ -691,8 +827,6 @@
                 isPlaying = false;
                 answered = true;
                 answerInput.disabled = true;
-                flagImg.src = 'https://flagcdn.com/w1280/un.png';
-                flagImg.style.opacity = '0.3';
                 feedbackEl.className = 'feedback correct';
                 feedbackEl.innerHTML = `
                     <div class="reveal">Finished!</div>
@@ -712,9 +846,13 @@
             answered = false;
             answeredCorrect = false;
 
-            flagImg.src = flagUrl(current.code);
-            flagImg.alt = 'Flag';
-            flagImg.style.opacity = '1';
+            if (currentMode === 'map') {
+                highlightCountry(current.code);
+            } else {
+                flagImg.src = flagUrl(current.code);
+                flagImg.alt = 'Flag';
+                flagImg.style.opacity = '1';
+            }
 
             answerInput.value = '';
             answerInput.disabled = false;
@@ -814,6 +952,7 @@
             document.body.classList.toggle('dark-mode');
             const isDark = document.body.classList.contains('dark-mode');
             localStorage.setItem('flagQuizTheme', isDark ? 'dark' : 'light');
+            updateMapTheme();
         }
 
         function loadTheme() {
@@ -859,8 +998,12 @@
         // Menu & Navigation Buttons
         document.querySelectorAll('.menu-btn[data-mode]').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                startGame(e.target.dataset.mode);
+                startGame(e.target.dataset.mode, 'flag');
             });
+        });
+
+        mapMenuBtn.addEventListener('click', () => {
+            startGame('10', 'map'); // Default to 10 questions for Map Mode
         });
 
         lookupMenuBtn.addEventListener('click', showLookup);
