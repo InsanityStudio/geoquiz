@@ -704,16 +704,18 @@
                 exclude: ["AQ"] // Exclude Antarctica
             }));
 
+            // Removed tooltipText so hovering doesn't reveal the country name
             polygonSeries.mapPolygons.template.setAll({
                 fill: am5.color(getComputedStyle(document.documentElement).getPropertyValue('--map-country-fill').trim()),
                 stroke: am5.color(getComputedStyle(document.documentElement).getPropertyValue('--map-country-stroke').trim()),
-                strokeWidth: 0.5,
-                tooltipText: "{name}"
+                strokeWidth: 0.5
             });
 
-            // Disable dragging and zooming for a fixed view
+            // Completely disable interactions
             chart.seriesContainer.draggable = false;
             chart.seriesContainer.resizable = false;
+            chart.seriesContainer.wheelable = false;
+            chart.seriesContainer.pinchable = false;
             chart.set("zoomLevel", 1);
         }
 
